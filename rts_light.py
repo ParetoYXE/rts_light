@@ -21,6 +21,10 @@ tileH = h / screenSizeY
 scrollModX = 0 
 scrollModY = 0
 
+mapDimension = 100
+
+mapTracker = [''] * (mapDimension*mapDimension)
+
 
 
 treeImage = pygame.image.load('Tree.png')
@@ -35,6 +39,11 @@ roadImage = pygame.image.load('road.png')
 roadImage = pygame.transform.scale(roadImage,(round(tileW),round(tileH)))
 waterImage = pygame.image.load('water.png')
 waterImage = pygame.transform.scale(waterImage,(round(tileW),round(tileH)))
+groundImage = pygame.image.load('ground.png')
+groundImage = pygame.transform.scale(groundImage,(round(tileW),round(tileH)))
+mountainImage = pygame.image.load('mountain.png')
+mountainImage = pygame.transform.scale(mountainImage,(round(tileW),round(tileH)))
+
 
 map = []
 npcs = []
@@ -43,33 +52,80 @@ commandToggle = False
 
 
 
+
+# Create your dictionary class
+class my_dictionary(dict):
+  
+    # __init__ function
+    def __init__(self):
+        self = dict()
+          
+    # Function to add key:value
+    def add(self, key, value):
+        self[key] = value
+
+
 font = pygame.font.SysFont('System',30)
 
 stats = {'Population':0, 'Recruitment':0, 'Wood':0, 'Food':0, 'Fuel':0, 'Ammo':0}
 
+trackedSeedsGround = my_dictionary()
+trackedSeedsForest = my_dictionary()
+trackedSeedsMountain = my_dictionary()  
+
 def generateMap():
-     for i in range(5000):
-          map.append({'x':random.randint(0,100), 'y':random.randint(0,100),'image':treeImage, 'hp':5,'type':'tree'})
-     for i in range(10):
-          posX = random.randint(0,100)
-          posY = random.randint(0,100)
-          map.append({'x':posX, 'y':posY,'image':castleImage,'hp':100,'type':'keep'})
+     
+     for i in range(40):
+          seedX = random.randint(0,60)
+          seedY = random.randint(0,60)
+          for j in range(random.randint(8,10)):
+               for k in range(random.randint(8,10)):
+                    genX = seedX + j+random.randint(1,2)
+                    genY = seedY + k     
+                    if (str(genX)+":"+str(genY)) not in trackedSeedsGround:
+                         trackedSeedsGround.add(str(genX)+":"+str(genY),'true')
 
-          for j in range(random.randint(3,8)):
-               map.append({'x':posX+random.randint(-3,3), 'y':posY+random.randint(-3,3),'image':houseImage,'hp':15,'type':'house'})
-
+                         map.append({'x':genX, 'y':genY,'image':groundImage, 'hp':5,'type':'earth'})
+               
+     for i in map:
+          if(i['type'] == 'earth' and random.randint(1,10) < 3):
+               for j in range(random.randint(3,8)):
+                    genX = i['x'] + random.randint(-1,1)
+                    genY = i['y'] + random.randint(-1,1)
+                    if (str(genX)+":"+str(genY)) not in trackedSeedsForest:
+                         if(str(genX)+":"+str(genY) in trackedSeedsGround):
+                              trackedSeedsForest.add(str(genX)+":"+str(genY),'true')
+                              map.append({'x':genX, 'y':genY,'image':treeImage, 'hp':5,'type':'tree'})
+          else:
+               genX = i['x']
+               genY = i['y']
+               if (str(genX)+":"+str(genY)) not in trackedSeedsForest and random.randint(1,100) < 2:
+                    for j in range(4):
+                         newX = genX + random.randint(-1,1)
+                         newY = genY + random.randint(-1,1)
+                         if(str(newX)+":"+str(newY) in trackedSeedsGround):
+                              map.append({'x':newX, 'y':newY,'image':houseImage,'hp':15,'type':'house'})
+     for i in map:
+          if(i['type'] == 'earth' and random.randint(1,1000) < 10):
+               for j in range(10):
+                    genX = i['x'] + j + random.randint(-3,0)
+                    genY = i['y'] + j + random.randint(-3,0)
+                    if(str(genX)+":"+str(genY) in trackedSeedsGround):
+                         map.append({'x':genX, 'y':genY,'image':mountainImage,'hp':100,'type':'mountain'})
 
 def renderMap():
      for i in map:
           if(i['hp'] > 0):
-               screen.blit(i['image'],(i['x']*tileW - scrollModX,i['y']*tileH - scrollModY))
+               if(scrollModX <= i['x']*tileW <= scrollModX + (screenSizeX*tileW)):
+                    if(scrollModY <= i['y']*tileH <=scrollModY + (screenSizeY*tileH)):
+                         screen.blit(i['image'],(i['x']*tileW - scrollModX,i['y']*tileH - scrollModY))
 
 
 def npcGenerate():
      for i in map:
-          if i['image'] == castleImage:
-               for j in range(random.randint(1,10)):
-                    npcs.append({'x':i['x']+random.randint(0,10), 'y':i['y']+random.randint(0,10),'image':npcImage, 'state': 'passive','selected':False, 'dest':[0,0],'collisionCount':0,'type':'peasent'})
+          if i['image'] == houseImage:
+               for j in range(random.randint(1,1)):
+                    npcs.append({'x':i['x']+random.randint(-2,2), 'y':i['y']+random.randint(-2,2),'image':npcImage, 'state': 'passive','selected':False, 'dest':[0,0],'collisionCount':0,'type':'peasent', 'hp':0,'skills':[]})
                     stats['Population']+=1
 
 
@@ -230,24 +286,24 @@ def command(pos):
 
 def select(pos):
       for i in npcs:
-          if((pos[0] - (tileW) + scrollModX) < (i['x'] * tileW) < (pos[0] + (tileW)+scrollModX)):
+          if((pos[0] - (tileW) + scrollModX) < ((i['x']) * tileW) < (pos[0]+scrollModX)):
                if((pos[1] - (tileH) + scrollModY) < (i['y'] * tileH) < (pos[1] + (tileH) + scrollModY)):
                     i['selected'] = not i['selected']
 
 def npcCollision():
      for i in npcs:
           for j in map:
-               if(i['x'] == j['x'] and i['y'] == j['y']):
+               if(i['x'] == j['x'] and i['y'] == j['y'] and j['type'] != 'earth'):
                     j['hp']-=1
 
 
 def renderUI():
      statsLabels = ['Population', 'Recruitment', 'Wood', 'Food', 'Fuel', 'Ammo']
      count = 0
-     pygame.draw.rect(screen,(0,0,0),(tileW*20,tileH*5,tileW*5,tileH*15),0)
+     pygame.draw.rect(screen,(0,0,0),(tileW*33,tileH*5,tileW*5,tileH*15),0)
      for i in statsLabels:
           text_surface = font.render(i+':'+str(stats[i]),False,(255,255,255))
-          screen.blit(text_surface,(tileW*21,tileH*(7+count)))
+          screen.blit(text_surface,(tileW*34,tileH*(7+count)))
           count +=1
 
 timer = pygame.time.get_ticks()
@@ -279,6 +335,11 @@ def npcCull():
                map.remove(i)
                if(i['type'] == 'tree'):
                     stats['Wood']+=1
+
+
+
+
+
 generateMap()
 #riverGenerate()
 roadGenerate()
@@ -291,7 +352,7 @@ sortMap()
 while run:
 
 
-     screen.fill((0,110,51))
+     screen.fill((0,94,184))
 
      for eve in pygame.event.get():
           if eve.type==pygame.QUIT:
@@ -315,7 +376,7 @@ while run:
 
 
 
-     if pygame.time.get_ticks()-timer > 100:
+     if pygame.time.get_ticks()-timer > 10:
           timer = pygame.time.get_ticks()
           if(x > (w - tileW*2)):
                scrollModX += tileW
@@ -325,15 +386,14 @@ while run:
                scrollModY += tileH
           if(y < tileH * 2):
                scrollModY -= tileH
-     if pygame.time.get_ticks() - aiTimer > 500:
+          renderMap()
+          renderNPC()
+          renderUI()
+          pygame.display.flip()
+     if pygame.time.get_ticks() - aiTimer > 200:
           aiTimer = pygame.time.get_ticks()
           npcAI()
           collisionReset()
           npcCollision()
           npcCull()
 
-
-     renderMap()
-     renderNPC()
-     #renderUI()
-     pygame.display.flip()
