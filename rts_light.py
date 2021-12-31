@@ -78,8 +78,8 @@ def generateMap():
      for i in range(40):
           seedX = random.randint(0,60)
           seedY = random.randint(0,60)
-          for j in range(random.randint(8,10)):
-               for k in range(random.randint(8,10)):
+          for j in range(random.randint(10,10)):
+               for k in range(random.randint(10,10)):
                     genX = seedX + j+random.randint(1,2)
                     genY = seedY + k     
                     if (str(genX)+":"+str(genY)) not in trackedSeedsGround:
@@ -137,6 +137,7 @@ def renderNPC():
                
 
 def npcAI():
+     count = 0
      for i in npcs:
           if(i['state'] == 'excited'):
                i['x'] += random.randint(-1,1)
@@ -144,20 +145,20 @@ def npcAI():
           elif(i['state'] == 'commanded'):
                if(i['x'] < i['dest'][0]):
                     i['x']+=1
-                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']])):
-                         i['x']+= random.randint(-1,0)
+                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']],count)):
+                         i['x']+= -1
                if(i['x'] > i['dest'][0]):
                     i['x']-=1
-                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']])):
-                         i['x']+= random.randint(0,1)
+                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']],count)):
+                         i['x']+= 1
                if(i['y'] < i['dest'][1]):
                     i['y']+=1
-                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']])):
-                         i['y']+= random.randint(-1,0)
+                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']],count)):
+                         i['y']+= -1
                if(i['y'] > i['dest'][1]):
                     i['y']-=1
-                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']])):
-                         i['y']+= random.randint(0,1)
+                    if(collisionDetection([i['x'],i['y']], [i['x'],i['y']],count)):
+                         i['y']+= 1
 
                if(i['collisionCount'] > 10):
                     i['state'] = 'passive'
@@ -166,7 +167,7 @@ def npcAI():
                if(i['x'] == i['dest'][0]):
                     if(i['y'] == i['dest'][1]):
                          i['state'] = 'passive'
-                      
+          count+=1   
           
 
 def sortMap():
@@ -310,12 +311,14 @@ timer = pygame.time.get_ticks()
 aiTimer = pygame.time.get_ticks()
 
 
-def collisionDetection(newCords,oldCords):
+def collisionDetection(newCords,oldCords,count):
      collision = False
+     newCount = 0
      for i in npcs:
           pos = [i['x'],i['y']]
-          if pos == newCords:
+          if pos == newCords and newCount != count:
                collision = True
+          newCount+=1
 
      return collision
 
@@ -376,7 +379,7 @@ while run:
 
 
 
-     if pygame.time.get_ticks()-timer > 10:
+     if pygame.time.get_ticks()-timer > 30:
           timer = pygame.time.get_ticks()
           if(x > (w - tileW*2)):
                scrollModX += tileW
